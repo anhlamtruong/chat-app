@@ -14,6 +14,7 @@ import {
   onAuthStateChanged,
   NextOrObserver,
   User,
+  UserCredential,
 } from "firebase/auth";
 
 import {
@@ -26,6 +27,7 @@ import {
   query,
   getDocs,
   QueryDocumentSnapshot,
+  updateDoc,
 } from "firebase/firestore";
 
 // import { getAuth } from "firebase/auth";
@@ -68,19 +70,21 @@ export const signInWithGooglePopup = () =>
 export const signOutUser = async () => await signOut(auth);
 
 //*function CALL AuthStateChangedListener**//
-// export const onAuthStateChangedListener = (callback: NextOrObserver<User>) =>
-//   onAuthStateChanged(auth, callback as NextOrObserver<User>);
+export const onAuthStateChangedListener = (callback: NextOrObserver<User>) =>
+  onAuthStateChanged(auth, callback as NextOrObserver<User>);
 
 //!TYPING
 export type AdditionalInformation = {
   displayName?: string;
-  username?: string;
+  username?: string | null;
+  photoURL?: string;
 };
 export type UserData = {
   createdAt: Date;
-  displayName: string;
   email: string;
+  displayName: string;
   username: string;
+  photoURL: string;
 };
 
 //*function STORING USER DATA INTO FIRESTORE => USER SNAPSHOT **//
@@ -136,4 +140,31 @@ export const getCurrentUser = (): Promise<User | null> => {
       reject
     );
   });
+};
+//*function GET CURRENT USERNAME => PROMISE**//
+export const getCurrentUserName = async (username: string) => {
+  const usernameDocRef = doc(firestore, "usernames", username);
+  const userSnapshot = await getDoc(usernameDocRef);
+  // console.log("FIRESTORE READ EXECUTE");
+  return userSnapshot.exists();
+};
+//*function ADD USERNAME AND USER TO FIREBASE => PROMISE**//
+export const addUsername = async (newUsername: string) => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return;
+    const userDoc = doc(firestore, "users", user.uid);
+    const usernameDoc = doc(firestore, "usernames", newUsername);
+    // Commit both docs together as a batch write.
+    const batch = writeBatch(firestore);
+    console.log(userDoc);
+    batch.update(userDoc, { username: newUsername });
+
+    // batch.set(userDoc, { username: newUsername, photoURL: user.photoURL, displayName: user.displayName });
+    batch.set(usernameDoc, { uid: user.uid });
+    await batch.commit();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
 };

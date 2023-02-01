@@ -14,6 +14,10 @@ import {
   EmailSignInStart,
   SignUpStart,
   SignUpSuccess,
+  addUsernameStart,
+  addUsernameFailed,
+  addUsernameSuccess,
+  AddUsernameStart,
 } from "./user.action";
 
 import {
@@ -23,20 +27,26 @@ import {
   // signInAuthUserWithEmailAndPassword,
   // createAuthUserWithEmailAndPassword,
   signOutUser,
+  addUsername,
 } from "../../lib/firebase";
+import { PayloadAction } from "@reduxjs/toolkit";
 //! THE FUNCTION IN SAGA
+
 //function get the userSnapshot from current Auth
 export function* getSnapshotFromUserAuth(
   userAuth: User,
   additionalDetails?: AdditionalInformation
 ) {
   try {
+    console.log("GET SNAPSHOT FIRE");
     const userSnapshot = yield* call(
       createUserDocumentFromAuth,
       userAuth,
       additionalDetails
     );
     if (userSnapshot) {
+      console.log("GOOGLE SIGN IN RUN");
+      console.log(userSnapshot);
       yield* put(
         signInSuccess({ id: userSnapshot.id, ...userSnapshot.data() })
       );
@@ -49,7 +59,11 @@ export function* getSnapshotFromUserAuth(
 export function* signInWithGoogle() {
   try {
     const { user } = yield* call(signInWithGooglePopup);
-    yield* call(getSnapshotFromUserAuth, user);
+    const addDetails: AdditionalInformation = {
+      displayName: user.displayName as string,
+      photoURL: user.photoURL as string,
+    };
+    yield* call(getSnapshotFromUserAuth, user, addDetails);
   } catch (error) {
     yield* put(signInFailed(error as Error));
   }
@@ -64,6 +78,33 @@ export function* isUserAuthenticated() {
     yield* put(signInFailed(err as Error));
   }
 }
+//function generate add username
+export function* addingUsername({
+  payload: { user, username },
+}: AddUsernameStart) {
+  try {
+    if (!user) return;
+    // console.log("ADDING USERNAME RUN");
+    // console.log(user);
+    // console.log(username);
+    yield* call(addUsername, username);
+    user.username = username;
+    yield* put(addUsernameSuccess(user, username));
+  } catch (error) {
+    yield* put(addUsernameFailed(error as Error));
+  }
+}
+//function signInAfterSignUp
+export function* signInAfterSignUp({
+  payload: { user, additionalDetails },
+}: SignUpSuccess) {
+  try {
+    yield* call(getSnapshotFromUserAuth, user, additionalDetails);
+  } catch (error) {
+    yield* put(signInFailed(error as Error));
+  }
+}
+
 //function generator sign out
 export function* signOut() {
   try {
@@ -95,6 +136,15 @@ export function* onCheckUserSession() {
 //   yield* takeLatest(USER_ACTION_TYPES.SIGN_UP_SUCCESS, signInAfterSignUp);
 // }
 
+export function* onAddUserStart() {
+  yield* takeLatest(USER_ACTION_TYPES.ADD_USERNAME_START, addingUsername);
+}
+export function* onAddUserSuccess() {
+  yield* takeLatest(
+    USER_ACTION_TYPES.ADD_USERNAME_SUCCESS,
+    isUserAuthenticated
+  );
+}
 export function* onSignOutStart() {
   yield* takeLatest(USER_ACTION_TYPES.SIGN_OUT_START, signOut);
 }
@@ -102,6 +152,8 @@ export function* userSagas() {
   yield* all([
     call(onCheckUserSession),
     call(onGoogleSignInStart),
+    call(onAddUserStart),
+    call(onAddUserSuccess),
     // call(onEmailSignInStart),
     // call(onSignUpStart),
     // call(onSignUpSuccess),

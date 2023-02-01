@@ -9,6 +9,18 @@ import { UserData, AdditionalInformation } from "../../lib/firebase";
 import { User } from "firebase/auth";
 
 //*TYPING THE ACTION
+export type AddUsernameStart = ActionWithPayload<
+  USER_ACTION_TYPES.ADD_USERNAME_START,
+  { user: null | UserData; username: string }
+>;
+export type AddUsernameSuccess = ActionWithPayload<
+  USER_ACTION_TYPES.ADD_USERNAME_SUCCESS,
+  { user: null | UserData; username: string }
+>;
+export type AddUsernameFailed = ActionWithPayload<
+  USER_ACTION_TYPES.ADD_USERNAME_FAILED,
+  Error
+>;
 export type CheckUserSession = Action<USER_ACTION_TYPES.CHECK_USER_SESSION>;
 export type SetCurrentUser = ActionWithPayload<
   USER_ACTION_TYPES.SET_CURRENT_USER,
@@ -100,4 +112,17 @@ export const signOutSuccess = withMatcher(
 export const signOutFailed = withMatcher(
   (error: Error): SignOutFailed =>
     createAction(USER_ACTION_TYPES.SIGN_OUT_FAILED, error)
+);
+
+export const addUsernameStart = withMatcher(
+  (user: null | UserData, username: string): AddUsernameStart =>
+    createAction(USER_ACTION_TYPES.ADD_USERNAME_START, { user, username })
+);
+export const addUsernameSuccess = withMatcher(
+  (user: null | UserData, username: string): AddUsernameSuccess =>
+    createAction(USER_ACTION_TYPES.ADD_USERNAME_SUCCESS, { user, username })
+);
+export const addUsernameFailed = withMatcher(
+  (error: Error): AddUsernameFailed =>
+    createAction(USER_ACTION_TYPES.ADD_USERNAME_FAILED, error)
 );

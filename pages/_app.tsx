@@ -1,5 +1,11 @@
 import "@/styles/globals.css";
 
+import { useDispatch } from "react-redux";
+
+import { checkUserSession } from "../store/user/user.action";
+import { useSelector } from "react-redux";
+import { selectCurrentUser } from "../store/user/user.selector";
+
 import { PersistGate } from "redux-persist/integration/react";
 import { Provider } from "react-redux";
 import { store, persistor } from "../store/store";

@@ -1,24 +1,30 @@
 import Link from "next/link";
 import Image from "next/image";
-import ava from "../public/author-image.jpg";
-import { lazy } from "react";
-type User = {
-  username: string;
-  photoURL: string;
-};
-type ImageLoader = {
-  src: string;
-  width: number;
-  quality: number;
-};
+import { useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
+import { useEffect, useState } from "react";
+import {
+  selectCurrentUser,
+  selectCurrentUsername,
+  // selectCurrentPhotoURL,
+} from "../store/user/user.selector";
+import { signOutStart, checkUserSession } from "../store/user/user.action";
 
 export default function NavBar({}) {
-  const user = {
-    username: "Anh234",
-    photoURL:
-      "https://cdn.pixabay.com/photo/2013/07/21/13/00/rose-165819_960_720.jpg",
-  } as User;
-  const { username, photoURL } = user;
+  const dispatch = useDispatch();
+  const signOutUser = () => dispatch(signOutStart());
+  // const [username, setUsername] = useState(null);
+  const currentUser = useSelector(selectCurrentUser);
+  const username = useSelector(selectCurrentUsername);
+  // console.log(username);
+  const photoURL2 =
+    "https://cdn.pixabay.com/photo/2013/07/21/13/00/rose-165819_960_720.jpg";
+
+  //*We want to mount this function 1 times only, to run the onAuthStateChangedListener once
+  useEffect(() => {
+    //! Using saga instead of synchronous hook function
+    dispatch(checkUserSession());
+  }, [dispatch]);
   return (
     <nav className="navbar">
       <ul>
@@ -40,7 +46,7 @@ export default function NavBar({}) {
                 <Link href={`/${username}`}>
                   <Image
                     priority={false}
-                    src={user?.photoURL}
+                    src={currentUser ? currentUser?.photoURL : photoURL2}
                     alt={`User ${username} avatar`}
                     width={30}
                     height={30}
