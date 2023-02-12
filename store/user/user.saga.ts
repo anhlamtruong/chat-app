@@ -18,18 +18,20 @@ import {
   addUsernameFailed,
   addUsernameSuccess,
   AddUsernameStart,
+  SignInSuccess,
 } from "./user.action";
 
 import {
   getCurrentUser,
   createUserDocumentFromAuth,
   signInWithGooglePopup,
-  // signInAuthUserWithEmailAndPassword,
-  // createAuthUserWithEmailAndPassword,
+  signInAuthUserWithEmailAndPassword,
+  createAuthUserWithEmailAndPassword,
   signOutUser,
   addUsername,
 } from "../../lib/firebase";
 import { PayloadAction } from "@reduxjs/toolkit";
+import toast from "react-hot-toast";
 //! THE FUNCTION IN SAGA
 
 //function get the userSnapshot from current Auth
@@ -38,15 +40,17 @@ export function* getSnapshotFromUserAuth(
   additionalDetails?: AdditionalInformation
 ) {
   try {
-    console.log("GET SNAPSHOT FIRE");
+    // const { displayName } = additionalDetails as AdditionalInformation;
+    // console.log("GET SNAPSHOT FIRE");
+    // console.log("SAGA:", displayName);
     const userSnapshot = yield* call(
       createUserDocumentFromAuth,
       userAuth,
       additionalDetails
     );
     if (userSnapshot) {
-      console.log("GOOGLE SIGN IN RUN");
-      console.log(userSnapshot);
+      // console.log(userSnapshot);
+      toast.success("Sign in successfully 🎉");
       yield* put(
         signInSuccess({ id: userSnapshot.id, ...userSnapshot.data() })
       );
@@ -65,6 +69,7 @@ export function* signInWithGoogle() {
     };
     yield* call(getSnapshotFromUserAuth, user, addDetails);
   } catch (error) {
+    toast.error("Google PopUp Accidentally Closed");
     yield* put(signInFailed(error as Error));
   }
 }
@@ -94,6 +99,7 @@ export function* addingUsername({
     yield* put(addUsernameFailed(error as Error));
   }
 }
+
 //function signInAfterSignUp
 export function* signInAfterSignUp({
   payload: { user, additionalDetails },
@@ -115,26 +121,74 @@ export function* signOut() {
   }
 }
 
+//function
+export function* signInWithEmail({
+  payload: { email, password },
+}: EmailSignInStart) {
+  try {
+    const userCredential = yield* call(
+      signInAuthUserWithEmailAndPassword,
+      email,
+      password
+    );
+    if (userCredential) {
+      const { user } = userCredential;
+      yield* call(getSnapshotFromUserAuth, user);
+    }
+  } catch (error) {
+    toast.error("Email or password might be incorrect!");
+    yield* put(signInFailed(error as Error));
+  }
+}
+
+//function
+export function* signUp({
+  payload: { email, password, displayName },
+}: SignUpStart) {
+  try {
+    const userCredential = yield* call(
+      createAuthUserWithEmailAndPassword,
+      email,
+      password
+    );
+    if (userCredential) {
+      const { user } = userCredential;
+      // yield* call(getSnapshotFromUserAuth, userCredential.user, addDetails);
+      yield* put(signUpSuccess(user, { displayName }));
+    }
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      toast.error(
+        "Email might be used by another account, please try another email"
+      );
+    }
+    yield* put(signUpFailed(error as Error));
+  }
+}
+
 //! THE LISTENER IN SAGA
 export function* onGoogleSignInStart() {
   yield* takeLatest(USER_ACTION_TYPES.GOOGLE_SIGN_IN_START, signInWithGoogle);
 }
 
-// export function* onEmailSignInStart() {
-//   yield* takeLatest(USER_ACTION_TYPES.EMAIL_SIGN_IN_START, signInWithEmail);
-// }
+export function* onEmailSignInStart() {
+  yield* takeLatest(USER_ACTION_TYPES.EMAIL_SIGN_IN_START, signInWithEmail);
+}
 
 export function* onCheckUserSession() {
   yield* takeLatest(USER_ACTION_TYPES.CHECK_USER_SESSION, isUserAuthenticated);
 }
 
-// export function* onSignUpStart() {
-//   yield* takeLatest(USER_ACTION_TYPES.SIGN_UP_START, signUp);
-// }
+export function* onSignUpStart() {
+  yield* takeLatest(USER_ACTION_TYPES.SIGN_UP_START, signUp);
+}
 
-// export function* onSignUpSuccess() {
-//   yield* takeLatest(USER_ACTION_TYPES.SIGN_UP_SUCCESS, signInAfterSignUp);
-// }
+export function* onSignUpSuccess() {
+  yield* takeLatest(USER_ACTION_TYPES.SIGN_UP_SUCCESS, signInAfterSignUp);
+}
+export function* onSignInAfterSignUp() {
+  yield* takeLatest(USER_ACTION_TYPES.SIGN_UP_SUCCESS, isUserAuthenticated);
+}
 
 export function* onAddUserStart() {
   yield* takeLatest(USER_ACTION_TYPES.ADD_USERNAME_START, addingUsername);
@@ -154,9 +208,10 @@ export function* userSagas() {
     call(onGoogleSignInStart),
     call(onAddUserStart),
     call(onAddUserSuccess),
-    // call(onEmailSignInStart),
-    // call(onSignUpStart),
-    // call(onSignUpSuccess),
+    call(onEmailSignInStart),
+    call(onSignUpStart),
+    call(onSignUpSuccess),
     call(onSignOutStart),
+    // call(onSignInAfterSignUp),
   ]);
 }

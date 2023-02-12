@@ -6,8 +6,8 @@ const MainColor = "black";
 // $main-color: black;
 
 const shrinkLabelStyles = css`
-  top: -1.8rem;
-  font-size: 1.2rem;
+  top: -1.2rem;
+  font-size: 0.8rem;
   color: ${MainColor};
 `;
 
@@ -17,12 +17,12 @@ type FormInputLabelProps = {
 
 export const FormInputLabel = styled.label<FormInputLabelProps>`
   color: ${subColor};
-  font-size: 1.6rem;
+  font-size: 1.2rem;
   font-weight: normal;
   position: absolute;
   pointer-events: none;
   left: 0.5rem;
-  top: 1rem;
+  top: 0.8rem;
   transition: 300ms ease all;
   ${({ shrink }) => shrink && shrinkLabelStyles}
 `;
@@ -30,7 +30,7 @@ export const Input = styled.input`
   background: none;
   background-color: white;
   color: ${subColor};
-  font-size: 1.8rem;
+  font-size: 1rem;
   padding: 1rem 1rem 1rem 0.5rem;
   display: block;
   width: 100%;
@@ -48,7 +48,7 @@ export const Input = styled.input`
 
 export const Form = styled.div`
   position: relative;
-  margin: 4.5rem 0;
+  margin: 2.5rem 0;
   input[type="password"] {
     letter-spacing: 0.3em;
   }

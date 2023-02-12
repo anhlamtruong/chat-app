@@ -6,6 +6,15 @@ import {
   signOutSuccess,
   signInSuccess,
   addUsernameSuccess,
+  signOutStart,
+  EmailSignInStart,
+  GoogleSignInStart,
+  SignUpStart,
+  AddUsernameStart,
+  signUpStart,
+  emailSignInStart,
+  googleSignInStart,
+  addUsernameStart,
 } from "./user.action";
 import { AnyAction } from "@reduxjs/toolkit";
 import { UserData } from "../../lib/firebase";
@@ -15,14 +24,12 @@ export type UserState = {
   readonly currentUser: UserData | null;
   readonly isLoading: boolean;
   readonly error: Error | null;
-  readonly username: string | null;
 };
 
 export const INITIAL_STATE: UserState = {
   currentUser: null,
   isLoading: false,
   error: null,
-  username: null,
 };
 
 //function using reducer hooks
@@ -34,21 +41,45 @@ export const userReducer = (state = INITIAL_STATE, action: AnyAction) => {
     return {
       ...state,
       currentUser: action.payload,
+      isLoading: false,
     };
   }
   if (addUsernameSuccess.match(action)) {
     return {
       ...state,
       currentUser: action.payload.user,
-      username: action.payload.username,
+      isLoading: false,
+    };
+  }
+  if (
+    signOutStart.match(action) ||
+    signUpStart.match(action) ||
+    emailSignInStart.match(action) ||
+    googleSignInStart.match(action) ||
+    addUsernameStart.match(action)
+  ) {
+    return {
+      ...state,
+      isLoading: true,
     };
   }
   if (signOutSuccess.match(action)) {
     return {
       ...state,
       currentUser: null,
+      isLoading: false,
     };
   }
+  // if (
+  //   signInStart.match(action) ||
+  //   signUpFailed.match(action) ||
+  //   signOutFailed.match(action)
+  // ) {
+  //   return {
+  //     ...state,
+  //     error: action.payload,
+  //   };
+  // }
   if (
     signInFailed.match(action) ||
     signUpFailed.match(action) ||
@@ -57,6 +88,7 @@ export const userReducer = (state = INITIAL_STATE, action: AnyAction) => {
     return {
       ...state,
       error: action.payload,
+      isLoading: false,
     };
   }
   return state;

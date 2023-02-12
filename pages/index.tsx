@@ -11,21 +11,41 @@ import Loader from "@/components/Loader";
 import toast from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
+import { useSelector } from "react-redux";
+import {
+  selectCurrentUser,
+  selectCurrentUsername,
+  // selectCurrentPhotoURL,
+} from "../store/user/user.selector";
+import { UserData } from "@/lib/firebase";
+
+const LIMIT = 1;
 
 export default function Home() {
+  const currentUser = useSelector(selectCurrentUser);
+  const username = useSelector(selectCurrentUsername);
   return (
-    <div>
-      <Loader show={true}></Loader>
-      <Link
-        prefetch={false}
-        href={{
-          pathname: "/[username]",
-          query: { username: "anh124" },
-        }}
-      >
-        Anh profiles
-      </Link>
-      <button onClick={() => toast.success("hello toast!")}>Toast Me</button>
-    </div>
+    <>
+      {currentUser ? (
+        <div className={styles.homePageContainer}>
+          <Link
+            prefetch={false}
+            href={{
+              pathname: "/[username]",
+              query: { username: username },
+            }}
+          >
+            Go to Profile
+          </Link>
+          <button onClick={() => toast.success("hello toast!")}>
+            Toast Me
+          </button>
+        </div>
+      ) : (
+        <div>
+          <h1>No User yet</h1>
+        </div>
+      )}
+    </>
   );
 }

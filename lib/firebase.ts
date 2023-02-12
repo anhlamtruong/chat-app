@@ -27,8 +27,13 @@ import {
   query,
   getDocs,
   QueryDocumentSnapshot,
+  DocumentData,
   updateDoc,
+  limit,
+  where,
+  orderBy,
 } from "firebase/firestore";
+import { PostItem, Posts } from "@/store/posts/post.types";
 
 // import { getAuth } from "firebase/auth";
 // import { getStorage } from "firebase/storage";
@@ -54,7 +59,7 @@ if (!firebase.apps.length) {
   // const analytics = getAnalytics(app);
 }
 export const auth = getAuth();
-export const firestore = getFirestore();
+export const db = getFirestore();
 // export const storage = firebase.storage();
 
 //*function LOGIN WITH GOOGLE OR FACEBOOK **/
@@ -84,7 +89,33 @@ export type UserData = {
   email: string;
   displayName: string;
   username: string;
-  photoURL: string;
+  photoURL?: string;
+};
+//*function SIGNUP WITH EMAIL AND PASSWORD **//
+export const createAuthUserWithEmailAndPassword = async (
+  email: string,
+  password: string
+) => {
+  try {
+    if (!email || !password) return;
+    return createUserWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    console.log("FAIL");
+    throw err;
+  }
+};
+
+//*function SIGN IN WITH EMAIL AND PASSWORD **//
+export const signInAuthUserWithEmailAndPassword = async (
+  email: string,
+  password: string
+) => {
+  try {
+    if (!email || !password) return;
+    return signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    throw err;
+  }
 };
 
 //*function STORING USER DATA INTO FIRESTORE => USER SNAPSHOT **//
@@ -95,7 +126,7 @@ export const createUserDocumentFromAuth = async (
   try {
     if (!userAuth) return;
     //param doc (DATABASE,COLLECTION,UNIQUE IDENTIFIER)
-    const userDocRef = doc(firestore, "users", userAuth.uid);
+    const userDocRef = doc(db, "users", userAuth.uid);
     // console.log(userDocRef);
 
     //* Get and check data function
@@ -108,6 +139,7 @@ export const createUserDocumentFromAuth = async (
       const { displayName, email } = userAuth;
       const createdAt = new Date();
       try {
+        const { displayName } = additionalInformation;
         await setDoc(userDocRef, {
           displayName,
           email,
@@ -143,9 +175,9 @@ export const getCurrentUser = (): Promise<User | null> => {
 };
 //*function GET CURRENT USERNAME => PROMISE**//
 export const getCurrentUserName = async (username: string) => {
-  const usernameDocRef = doc(firestore, "usernames", username);
+  const usernameDocRef = doc(db, "usernames", username);
   const userSnapshot = await getDoc(usernameDocRef);
-  // console.log("FIRESTORE READ EXECUTE");
+  // console.log("db READ EXECUTE");
   return userSnapshot.exists();
 };
 //*function ADD USERNAME AND USER TO FIREBASE => PROMISE**//
@@ -153,10 +185,10 @@ export const addUsername = async (newUsername: string) => {
   try {
     const user = await getCurrentUser();
     if (!user) return;
-    const userDoc = doc(firestore, "users", user.uid);
-    const usernameDoc = doc(firestore, "usernames", newUsername);
+    const userDoc = doc(db, "users", user.uid);
+    const usernameDoc = doc(db, "usernames", newUsername);
     // Commit both docs together as a batch write.
-    const batch = writeBatch(firestore);
+    const batch = writeBatch(db);
     console.log(userDoc);
     batch.update(userDoc, { username: newUsername });
 
@@ -168,3 +200,63 @@ export const addUsername = async (newUsername: string) => {
     throw error;
   }
 };
+export async function getUserID(username: string): Promise<void | string> {
+  const usernameDocRef = doc(db, "usernames", username);
+  //* Get and check data function
+  const usernameSnapshot = await getDoc(usernameDocRef);
+  if (!usernameSnapshot.exists()) return;
+  return usernameSnapshot.get("uid") as string;
+}
+export async function getUserWithUserID(
+  username: string
+): Promise<void | QueryDocumentSnapshot<UserData>> {
+  const userID = await getUserID(username);
+  if (!userID) return;
+  const userDocRef = doc(db, "users", userID);
+  const userSnapshot = await getDoc(userDocRef);
+  if (!userSnapshot.exists()) return;
+  //* Return "user" base on their uid
+  return userSnapshot as QueryDocumentSnapshot<UserData>;
+}
+
+export type PostItemsAndUserData = {
+  posts: PostItem[];
+  user: UserData;
+};
+//function that will get Categories and Documents
+export const getPostsFromUsername = async (
+  username: string
+): Promise<void | PostItemsAndUserData> => {
+  try {
+    const userDoc = await getUserWithUserID(username);
+    const userID = await getUserID(username);
+    if (!userID || !userDoc) return;
+    // If there is a user documents and the postsCol
+    let user: UserData;
+    let posts: PostItem[];
+    // Find the collections in db
+    let postsCol = collection(db, "users", `${userID}`, "posts");
+    // Create userData from user Doc
+    // Query the postsData
+    user = userDoc.data();
+    const postsQuery = query(postsCol, orderBy("createdAt", "desc"));
+    posts = (await getDocs(postsQuery)).docs.map((snap) => {
+      const data = snap.data() as PostItem;
+      return data;
+    });
+    return { posts, user };
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};
+
+export function postToJSON(doc: QueryDocumentSnapshot<DocumentData>) {
+  const data = doc.data();
+  return {
+    ...data,
+    // Gotcha! firestore timestamp NOT serializable to JSON. Must convert to milliseconds
+    createdAt: data.createdAt.toMillis(),
+    updatedAt: data.updatedAt.toMillis(),
+  };
+}

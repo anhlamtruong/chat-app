@@ -9,7 +9,7 @@ import {
   // selectCurrentPhotoURL,
 } from "../store/user/user.selector";
 import { signOutStart, checkUserSession } from "../store/user/user.action";
-
+import { SignOutButton } from "@/pages/enter";
 export default function NavBar({}) {
   const dispatch = useDispatch();
   const signOutUser = () => dispatch(signOutStart());
@@ -17,8 +17,7 @@ export default function NavBar({}) {
   const currentUser = useSelector(selectCurrentUser);
   const username = useSelector(selectCurrentUsername);
   // console.log(username);
-  const photoURL2 =
-    "https://cdn.pixabay.com/photo/2013/07/21/13/00/rose-165819_960_720.jpg";
+  const photoURL2 = "/../public/random-user.png";
 
   //*We want to mount this function 1 times only, to run the onAuthStateChangedListener once
   useEffect(() => {
@@ -42,17 +41,33 @@ export default function NavBar({}) {
                   <button className="btn-blue">Write Posts</button>
                 </Link>
               </li>
+              <li className="navbar-username">
+                {currentUser
+                  ? currentUser.username
+                    ? currentUser.username
+                    : "Unknown User"
+                  : "Unknown User"}
+              </li>
               <li>
                 <Link href={`/${username}`}>
                   <Image
                     priority={false}
-                    src={currentUser ? currentUser?.photoURL : photoURL2}
+                    src={
+                      currentUser
+                        ? currentUser.photoURL
+                          ? currentUser.photoURL
+                          : photoURL2
+                        : photoURL2
+                    }
                     alt={`User ${username} avatar`}
                     width={30}
                     height={30}
-                    quality={15}
+                    quality={100}
                   />
                 </Link>
+              </li>
+              <li>
+                <SignOutButton />
               </li>
             </>
           )

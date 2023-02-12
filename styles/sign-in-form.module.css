@@ -1,0 +1,18 @@
+.signIn {
+  width: 60%;
+}
+.googleSignIn {
+  margin-top: 1rem;
+}
+.signUp {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.signUp h1 {
+  margin-top: 1rem;
+}
+
+.enterContainer {
+  display: flex;
+}
