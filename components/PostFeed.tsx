@@ -3,9 +3,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { FC } from "react";
 import { NextPage } from "next";
-
 export type UserProfilePage = {
-  posts: PostItem[];
+  post: PostItem;
   admin: boolean;
 };
 
@@ -14,14 +13,11 @@ export type PostItemType = {
   admin: boolean;
 };
 
-const PostFeed: NextPage<UserProfilePage> = ({ posts, admin, ...other }) => {
-  // console.log(username);
+const PostFeed: NextPage<UserProfilePage> = ({ post, admin, ...other }) => {
   return (
     <>
-      {posts ? (
-        posts.map((post) => (
-          <PostItem post={post} key={post.slug} admin={admin} />
-        ))
+      {post ? (
+        <PostItem post={post} key={post.slug} admin={admin} />
       ) : (
         <div>Nothing</div>
       )}
@@ -36,11 +32,11 @@ const PostItem: NextPage<PostItemType> = ({ post, admin, ...other }) => {
   return (
     <>
       <div className="card">
+        <Link href={`/${post.username}/${post.slug}`}>
+          <strong>{`  ${post.title}`}</strong>
+        </Link>
         <Link href={`/${post.username}`}>
           <strong> By @{post.username}</strong>
-        </Link>
-        <Link href={`/${post.username}/${post.slug}`}>
-          <strong> By @{post.title}</strong>
         </Link>
       </div>
       <footer>

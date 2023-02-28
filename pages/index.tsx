@@ -1,15 +1,12 @@
-import { useEffect } from "react";
+import { useState } from "react";
+import { FC } from "react";
 
-import Head from "next/head";
-import Image from "next/image";
-import Link from "next/link";
+import { GetServerSideProps } from "next";
 
 import { Inter } from "@next/font/google";
-import styles from "@/styles/Home.module.css";
+
 import Loader from "@/components/Loader";
-
-import toast from "react-hot-toast";
-
+import MetaTags from "@/components/Metatags";
 const inter = Inter({ subsets: ["latin"] });
 import { useSelector } from "react-redux";
 import {
@@ -17,35 +14,79 @@ import {
   selectCurrentUsername,
   // selectCurrentPhotoURL,
 } from "../store/user/user.selector";
-import { UserData } from "@/lib/firebase";
+import {
+  getAllPostsWithID,
+  PostWithUsername,
+  fromMillis,
+  getMorePostsWithID,
+} from "@/lib/firebase";
+import PostFeed from "@/components/PostFeed";
+import { Timestamp } from "firebase/firestore";
 
-const LIMIT = 1;
+interface Props {
+  postsWithUsernameArray: PostWithUsername[];
+}
+export const LIMIT = 1;
 
-export default function Home() {
+export const getServerSideProps: GetServerSideProps<Props> = async (
+  context
+) => {
+  const postsWithUsernameArray = await getAllPostsWithID();
+  return {
+    props: { postsWithUsernameArray },
+  };
+};
+
+export const Home: FC<Props> = ({ postsWithUsernameArray }) => {
   const currentUser = useSelector(selectCurrentUser);
   const username = useSelector(selectCurrentUsername);
+  const [posts, setPosts] = useState(postsWithUsernameArray);
+  const [loading, setLoading] = useState(false);
+  const [postsEnd, setPostsEnd] = useState(false);
+
+  const getMorePosts = async () => {
+    setLoading(true);
+    const last = posts[posts.length - 1];
+    const cursor =
+      typeof last.post.createdAt === "number"
+        ? fromMillis(last.post.createdAt)
+        : last.post.createdAt;
+
+    const newPostsWithUsernameArray = await getMorePostsWithID(
+      cursor as Timestamp
+    );
+    setPosts(posts.concat(newPostsWithUsernameArray));
+    setLoading(false);
+    if (newPostsWithUsernameArray.length < LIMIT) {
+      setPostsEnd(true);
+    }
+  };
   return (
-    <>
-      {currentUser ? (
-        <div className={styles.homePageContainer}>
-          <Link
-            prefetch={false}
-            href={{
-              pathname: "/[username]",
-              query: { username: username },
-            }}
-          >
-            Go to Profile
-          </Link>
-          <button onClick={() => toast.success("hello toast!")}>
-            Toast Me
-          </button>
-        </div>
+    <main>
+      <MetaTags
+        title="Creata Homepage"
+        image=""
+        description="Home page of Creata social media"
+      />
+      {/* //!This admin needed to be fixed because only user can see their own post as an admin */}
+      {posts ? (
+        posts.map((postWithUsername) => (
+          <PostFeed
+            post={postWithUsername.post}
+            key={postWithUsername.username}
+            admin={postWithUsername.username === currentUser?.username}
+          />
+        ))
       ) : (
-        <div>
-          <h1>No User yet</h1>
-        </div>
+        <div>Error</div>
       )}
-    </>
+      {!loading && !postsEnd && (
+        <button onClick={getMorePosts}>Load More</button>
+      )}
+      <Loader show={loading}></Loader>
+      {postsEnd && "You have reach the end"}
+    </main>
   );
-}
+};
+
+export default Home;

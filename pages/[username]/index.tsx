@@ -50,7 +50,11 @@ const UserProfilePage: NextPage<Props> = ({ user, posts }) => {
           {currentPostsIsLoading === true ? (
             <Loader show={currentPostsIsLoading}></Loader>
           ) : (
-            <PostFeed posts={currentPosts} admin={true}></PostFeed>
+            <>
+              {currentPosts.map((currPost) => (
+                <PostFeed post={currPost} key={currPost.uid} admin={true} />
+              ))}
+            </>
           )}
         </>
       ) : (

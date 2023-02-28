@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import firebase from "firebase/compat/app";
-
+import "firebase/firestore";
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -32,9 +32,16 @@ import {
   limit,
   where,
   orderBy,
+  collectionGroup,
+  Timestamp,
+  startAfter,
+  DocumentSnapshot,
+  DocumentReference,
+  serverTimestamp,
+  addDoc,
 } from "firebase/firestore";
 import { PostItem, Posts } from "@/store/posts/post.types";
-
+import { LIMIT } from "@/pages";
 // import { getAuth } from "firebase/auth";
 // import { getStorage } from "firebase/storage";
 // import { getFirestore } from "firebase/firestore";
@@ -60,6 +67,7 @@ if (!firebase.apps.length) {
 }
 export const auth = getAuth();
 export const db = getFirestore();
+
 // export const storage = firebase.storage();
 
 //*function LOGIN WITH GOOGLE OR FACEBOOK **/
@@ -246,17 +254,167 @@ export const getPostsFromUsername = async (
     });
     return { posts, user };
   } catch (err) {
+    console.error(err);
+    throw err;
+  }
+};
+
+export type PostWithUsername = {
+  post: PostItem;
+  username: string;
+};
+export const getAllPostsWithID = async (
+  start?: Timestamp
+): Promise<PostWithUsername[]> => {
+  try {
+    // Find the all collections in db
+    let allPostsCol = collectionGroup(db, "posts");
+    // Create userData from user Doc
+    // Query the postsData
+    const allPostsQuery = query(
+      allPostsCol,
+      where("published", "==", true),
+      orderBy("createdAt", "desc"),
+      limit(LIMIT)
+    );
+    const postsAndID = (await getDocs(allPostsQuery)).docs.map((snap) => {
+      const post = postToJSON(snap);
+      const username = getIDFromPost(snap);
+      console.log("POST :", post);
+      console.log("USERNAME :", username);
+      return { post, username };
+    });
+    return postsAndID as PostWithUsername[];
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};
+export const getMorePostsWithID = async (
+  start: Timestamp
+): Promise<PostWithUsername[]> => {
+  try {
+    // Find the all collections in db
+    let allPostsCol = collectionGroup(db, "posts");
+    // Create userData from user Doc
+    // Query the postsData
+    const allPostsQuery = query(
+      allPostsCol,
+      where("published", "==", true),
+      orderBy("createdAt", "desc"),
+      limit(LIMIT),
+      startAfter(start)
+    );
+    const postsAndID = (await getDocs(allPostsQuery)).docs.map((snap) => {
+      const post = postToJSON(snap);
+      const username = getIDFromPost(snap);
+      console.log("POST :", post);
+      console.log("USERNAME :", username);
+      return { post, username };
+    });
+    console.log(typeof postsAndID);
+    return postsAndID as PostWithUsername[];
+  } catch (err) {
     console.log(err);
     throw err;
   }
 };
 
-export function postToJSON(doc: QueryDocumentSnapshot<DocumentData>) {
+export type PostWithPath = {
+  post: PostItem;
+  path: string;
+};
+export const getPostPath = async (
+  username: string,
+  slug: string
+): Promise<PostWithPath | undefined> => {
+  try {
+    const userDoc = await getUserWithUserID(username);
+    const userID = await getUserID(username);
+    // console.log("USERDOC:", userDoc);
+    // console.log("USERDOC:", userID);
+    let path, post;
+    if (userDoc) {
+      const docRef = doc(db, "users", userID as string);
+      const nestedCollectionRef = collection(docRef, "posts");
+      const nestedDocRef = doc(nestedCollectionRef, slug);
+      const nestedDocSnapshot = await getDoc(nestedDocRef);
+      post = postToJSON(nestedDocSnapshot);
+      path = nestedDocRef.path;
+      return { post, path } as PostWithPath;
+    }
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};
+export const getDocWithPath = (path: string): DocumentReference => {
+  try {
+    return doc(db, path);
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};
+
+export function getIDFromPost(doc: QueryDocumentSnapshot<DocumentData>) {
   const data = doc.data();
+  return data.username as string;
+}
+export function postToJSON(
+  doc: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>
+) {
+  const data = doc.data() as DocumentData;
   return {
     ...data,
     // Gotcha! firestore timestamp NOT serializable to JSON. Must convert to milliseconds
     createdAt: data.createdAt.toMillis(),
     updatedAt: data.updatedAt.toMillis(),
-  };
+  } as PostItem;
 }
+
+export const fromMillis = (milliseconds: number) => {
+  return Timestamp.fromMillis(milliseconds);
+};
+
+//* Using for editing page
+export const writePostToStore = async (
+  title: string,
+  slug: string,
+  username: string
+) => {
+  try {
+    let uid = auth.currentUser?.uid;
+    if (!uid) {
+      const userID = await getUserID(username);
+      uid = userID as string;
+      if (!userID) {
+        return;
+      }
+    }
+
+    const data = {
+      title,
+      slug,
+      uid,
+      username,
+      published: false,
+      content: "# hello world!",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      heartCount: 0,
+    };
+
+    const docRef = doc(db, "users", uid as string);
+    const nestedCollectionRef = collection(docRef, "posts");
+    // Create a new doc in collection
+    const nestedNewDocRef = doc(nestedCollectionRef, slug);
+    // Commit both docs together as a batch write.
+    const batch = writeBatch(db);
+    batch.set(nestedNewDocRef, data);
+    await batch.commit();
+  } catch (error: unknown) {
+    console.log(error as Error);
+    throw error as Error;
+  }
+};

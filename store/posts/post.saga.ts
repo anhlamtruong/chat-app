@@ -14,6 +14,7 @@ import { PostItem, POSTS_ACTION_TYPES } from "./post.types";
 
 export function* fetchPostsAsync({ payload: username }: FetchPostsStart) {
   try {
+    // console.log("USERNAME:", username);
     const postsObject = yield* call(getPostsFromUsername, username as string);
     if (!postsObject) return;
     const { posts, user } = postsObject as PostItemsAndUserData;

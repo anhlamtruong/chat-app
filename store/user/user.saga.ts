@@ -50,7 +50,7 @@ export function* getSnapshotFromUserAuth(
     );
     if (userSnapshot) {
       // console.log(userSnapshot);
-      toast.success("Sign in successfully 🎉");
+
       yield* put(
         signInSuccess({ id: userSnapshot.id, ...userSnapshot.data() })
       );
@@ -105,6 +105,7 @@ export function* signInAfterSignUp({
   payload: { user, additionalDetails },
 }: SignUpSuccess) {
   try {
+    toast.success("Sign up successfully 🎉");
     yield* call(getSnapshotFromUserAuth, user, additionalDetails);
   } catch (error) {
     yield* put(signInFailed(error as Error));
