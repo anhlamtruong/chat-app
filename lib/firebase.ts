@@ -39,9 +39,12 @@ import {
   DocumentReference,
   serverTimestamp,
   addDoc,
+  increment,
+  CollectionReference,
 } from "firebase/firestore";
 import { PostItem, Posts } from "@/store/posts/post.types";
 import { LIMIT } from "@/pages";
+import { getStorage } from "firebase/storage";
 // import { getAuth } from "firebase/auth";
 // import { getStorage } from "firebase/storage";
 // import { getFirestore } from "firebase/firestore";
@@ -67,7 +70,8 @@ if (!firebase.apps.length) {
 }
 export const auth = getAuth();
 export const db = getFirestore();
-
+export const storage = getStorage();
+// export const STATE_CHANGED = firebase.storage.TaskEvent.STATE_CHANGED;
 // export const storage = firebase.storage();
 
 //*function LOGIN WITH GOOGLE OR FACEBOOK **/
@@ -416,5 +420,64 @@ export const writePostToStore = async (
   } catch (error: unknown) {
     console.log(error as Error);
     throw error as Error;
+  }
+};
+
+export const getPostBySlug = (slug: string) => {
+  let uid = auth.currentUser?.uid;
+  if (!uid) return;
+  const docRef = doc(db, "users", uid as string);
+  const nestedCollectionRef = collection(docRef, "posts");
+  const nestedNewDocRef = doc(nestedCollectionRef, slug);
+  return nestedNewDocRef as DocumentReference<DocumentData>;
+};
+export const updatePostFormAdmin = async (
+  postRef: DocumentReference<DocumentData>,
+  content: string,
+  published: boolean
+) => {
+  try {
+    await updateDoc(postRef, {
+      content,
+      published,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const reduceHeart = async (
+  postRef: DocumentReference<DocumentData>,
+  heartDocRef: DocumentReference<DocumentData>
+) => {
+  try {
+    const batch = writeBatch(db);
+    batch.update(postRef, { heartCount: increment(-1) });
+    batch.delete(heartDocRef);
+    await batch.commit();
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+export const increaseHeart = async (
+  postRef: DocumentReference<DocumentData>,
+  heartDocRef: DocumentReference<DocumentData>,
+  heartCollectRef: CollectionReference<DocumentData>
+) => {
+  try {
+    const uid = auth.currentUser?.uid;
+
+    const batch = writeBatch(db);
+    // const docRef = await addDoc(heartCollectRef, { uid: uid });
+    // console.log(docRef);
+    batch.update(postRef, { heartCount: increment(1) });
+    batch.set(heartDocRef, { uid });
+    await batch.commit();
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
 };
