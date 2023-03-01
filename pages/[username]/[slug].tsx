@@ -16,6 +16,9 @@ import {
 import { useDocumentData } from "react-firebase-hooks/firestore";
 import styles from "@/styles/Post.module.css";
 import PostContent from "@/components/PostContent";
+import AuthCheck from "@/components/AuthCheck";
+import Link from "next/link";
+import Heart from "@/components/HeartButton";
 
 interface Props {
   post: PostItem;
@@ -26,6 +29,7 @@ interface Params {
   slug: string;
 }
 
+//!ADDING SOMETHING TO MAKE TO GO FASTER
 export const getStaticProps: GetStaticProps<
   Props,
   { username: string; slug: string }
@@ -73,9 +77,15 @@ const PostPage: NextPage<Props> = (props) => {
         <PostContent post={post}></PostContent>
       </section>
       <aside className={`card ${styles.postControl}`}>
-        <p>
-          <strong>{post.heartCount || 0} &#x2665;</strong>
-        </p>
+        <AuthCheck
+          fallback={
+            <Link href="/enter">
+              <button>💗 Sign Up</button>
+            </Link>
+          }
+        >
+          <Heart postRef={postRef} />
+        </AuthCheck>
       </aside>
     </main>
   );

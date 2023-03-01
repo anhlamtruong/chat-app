@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
-import { FC, useEffect } from "react";
+import { useEffect } from "react";
 import { NextPage } from "next";
 import UserProfile from "../../components/UserProfile";
 import PostFeed from "../../components/PostFeed";
